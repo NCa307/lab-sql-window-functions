@@ -77,4 +77,23 @@ GROUP BY current_month)
 SELECT current_month, customer_num, LAG (customer_num, 1) OVER (ORDER BY current_month) as prev_mon, 
 ((customer_num-LAG (customer_num, 1) OVER (ORDER BY current_month) )/LAG (customer_num, 1) OVER (ORDER BY current_month))*100  as percentage_change
 FROM cte;
+#Step 4.Calculate the number of retained customers every month, i.e., customers who rented movies in the current and 
+#previous months
 
+WITH customer_monthly_activity AS (
+    SELECT DISTINCT  -- Use DISTINCT instead of GROUP BY
+        MONTH(rental_date) AS rental_month, 
+        customer_id,
+        LAG(MONTH(rental_date)) OVER (
+            PARTITION BY customer_id 
+            ORDER BY MONTH(rental_date)
+        ) AS previous_rental_month
+    FROM RENTAL
+)
+SELECT 
+    rental_month, 
+    COUNT(customer_id) AS total_customers,
+    SUM(CASE WHEN previous_rental_month = rental_month - 1 THEN 1 ELSE 0 END) AS retained_customers
+FROM customer_monthly_activity
+GROUP BY rental_month
+ORDER BY rental_month;
