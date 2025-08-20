@@ -81,19 +81,31 @@ FROM cte;
 #previous months
 
 WITH customer_monthly_activity AS (
-    SELECT DISTINCT  -- Use DISTINCT instead of GROUP BY
+    SELECT DISTINCT
+        YEAR(rental_date) AS rental_year,
         MONTH(rental_date) AS rental_month, 
         customer_id,
+        LAG(YEAR(rental_date)) OVER (
+            PARTITION BY customer_id 
+            ORDER BY YEAR(rental_date), MONTH(rental_date)
+        ) AS prev_year,
         LAG(MONTH(rental_date)) OVER (
             PARTITION BY customer_id 
-            ORDER BY MONTH(rental_date)
-        ) AS previous_rental_month
+            ORDER BY YEAR(rental_date), MONTH(rental_date)
+        ) AS prev_month
     FROM RENTAL
 )
 SELECT 
+    rental_year,
     rental_month, 
     COUNT(customer_id) AS total_customers,
-    SUM(CASE WHEN previous_rental_month = rental_month - 1 THEN 1 ELSE 0 END) AS retained_customers
+    SUM(CASE 
+        -- Normal case: same year, previous month
+        WHEN prev_year = rental_year AND prev_month = rental_month - 1 THEN 1
+        -- Year boundary case: Dec → Jan
+        WHEN prev_year = rental_year - 1 AND prev_month = 12 AND rental_month = 1 THEN 1
+        ELSE 0 
+    END) AS retained_customers
 FROM customer_monthly_activity
-GROUP BY rental_month
-ORDER BY rental_month;
+GROUP BY rental_year, rental_month
+ORDER BY rental_month DESC;
