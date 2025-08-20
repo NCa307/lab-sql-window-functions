@@ -60,19 +60,15 @@ ORDER BY (film_id);
 SELECT MONTH(rental_date) AS month, COUNT(DISTINCT(customer_id))
 FROM RENTAL
 GROUP BY month;
-
+#STep 2: Retrieve the number of active users in the previous month
 with cte as (
 SELECT MONTH(rental_date) AS current_month, COUNT(DISTINCT(customer_id)) AS customer_num
 FROM RENTAL
 GROUP BY current_month)
-SELECT current_month, customer_num, LAG (current_month, 1) OVER (ORDER BY current_month) as prev_mon
+SELECT current_month, customer_num, LAG (customer_num, 1) OVER (ORDER BY current_month) as prev_mon
 FROM cte;
 
 #Step 3. Calculate the percentage change in the number of active customers between the current and previous month
-
-SELECT MONTH(rental_date) AS current_month, COUNT(DISTINCT(customer_id)) AS customer_num,
-(current_month-LAG (current_month, 1))/LAG (current_month, 1) as percentage_change
-FROM cte;
 
 with cte as (
 SELECT MONTH(rental_date) AS current_month, COUNT(DISTINCT(customer_id)) AS customer_num
